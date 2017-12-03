@@ -1,0 +1,68 @@
+
+filename: Anthony_Hopkins_0001.png
+maximum indice: 19795
+maximum value: 0.99999892711639404297
+
+filename: Anthony_Hopkins_0000.png
+maximum indice: 44040
+maximum value: 0.99999845027923583984
+
+filename: Anthony_Hopkins_0002.png
+maximum indice: 19795
+maximum value: 0.99999403953552246094
+
+filename: Anthony_Hopkins_0003.png
+maximum indice: 19795
+maximum value: 0.99999785423278808594
+
+filename: Barack_Obama_0002.png
+maximum indice: 8750
+maximum value: 0.99999868869781494141
+
+filename: Barack_Obama_0000.png
+maximum indice: 8750
+maximum value: 0.99999403953552246094
+
+filename: Barack_Obama_0001.png
+maximum indice: 8750
+maximum value: 0.99999821186065673828
+
+filename: Brad_Pitt_0002.png
+maximum indice: 34505
+maximum value: 0.99999904632568359375
+
+filename: Brad_Pitt_0003.png
+maximum indice: 34505
+maximum value: 0.99999904632568359375
+
+filename: Brad_Pitt_0001.png
+maximum indice: 34505
+maximum value: 0.99999892711639404297
+
+filename: Brad_Pitt_0000.png
+maximum indice: 34505
+maximum value: 0.99999892711639404297
+
+filename: Jennifer_Lawrence_0002.png
+maximum indice: 11364
+maximum value: 0.99999725818634033203
+
+filename: Jennifer_Lawrence_0000.png
+maximum indice: 11364
+maximum value: 0.99999868869781494141
+
+filename: Jennifer_Lawrence_0001.png
+maximum indice: 11364
+maximum value: 0.99998402595520019531
+
+filename: Mehdi_Taremi.png
+maximum indice: 20903
+maximum value: 0.99930858612060546875
+
+filename: Ali_Karimi.png
+maximum indice: 2632
+maximum value: 0.99999773502349853516
+
+filename: Ehsan_Alikhani.png
+maximum indice: 40980
+maximum value: 0.99991095066070556641
