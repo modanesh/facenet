@@ -56,7 +56,7 @@ def main(args):
 
             # Check that there are at least one training image per class
             for cls in dataset:
-                assert(len(cls.image_paths)>0, 'There must be at least one image for each class in the dataset')            
+                assert len(cls.image_paths)>0, 'There must be at least one image for each class in the dataset'
 
                  
             paths, labels = facenet.get_image_paths_and_labels(dataset)
@@ -86,7 +86,7 @@ def main(args):
                 images = facenet.load_data(paths_batch, False, False, args.image_size)
                 feed_dict = { images_placeholder:images, phase_train_placeholder:False }
                 emb_array[start_index:end_index,:] = sess.run(embeddings, feed_dict=feed_dict)
-            
+
             classifier_filename_exp = os.path.expanduser(args.classifier_filename)
 
             if (args.mode=='TRAIN'):
@@ -94,7 +94,7 @@ def main(args):
                 print('Training classifier')
                 model = SVC(kernel='linear', probability=True)
                 model.fit(emb_array, labels)
-            
+
                 # Create a list of class names
                 class_names = [ cls.name.replace('_', ' ') for cls in dataset]
 
@@ -102,7 +102,7 @@ def main(args):
                 with open(classifier_filename_exp, 'wb') as outfile:
                     pickle.dump((model, class_names), outfile)
                 print('Saved classifier model to file "%s"' % classifier_filename_exp)
-                
+
             elif (args.mode=='CLASSIFY'):
                 # Classify images
                 print('Testing classifier')
@@ -114,10 +114,10 @@ def main(args):
                 predictions = model.predict_proba(emb_array)
                 best_class_indices = np.argmax(predictions, axis=1)
                 best_class_probabilities = predictions[np.arange(len(best_class_indices)), best_class_indices]
-                
+
                 for i in range(len(best_class_indices)):
                     print('%4d  %s: %.3f' % (i, class_names[best_class_indices[i]], best_class_probabilities[i]))
-                    
+
                 accuracy = np.mean(np.equal(best_class_indices, labels))
                 print('Accuracy: %.3f' % accuracy)
                 
@@ -134,7 +134,47 @@ def split_dataset(dataset, min_nrof_images_per_class, nrof_train_images_per_clas
             test_set.append(facenet.ImageClass(cls.name, paths[nrof_train_images_per_class:]))
     return train_set, test_set
 
-            
+def initModel(model_path, classifier_filename):
+    graph = tf.Graph()
+    with graph.as_default():
+        np.random.seed(seed=666)
+        sess = tf.Session()
+        # gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.5)
+        # sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options, log_device_placement=False))
+        # facenet.load_model(model_path, sess)
+        facenet.load_model(model_path)
+        images_placeholder = graph.get_tensor_by_name("input:0")
+        embeddings = graph.get_tensor_by_name("embeddings:0")
+        phase_train_placeholder = graph.get_tensor_by_name("phase_train:0")
+        embedding_size = embeddings.get_shape()[1]
+        graph.finalize()
+
+        classifier_filename_exp = os.path.expanduser(classifier_filename)
+        with open(classifier_filename_exp, 'rb') as infile:
+            (model, class_names) = pickle.load(infile)
+
+        return sess, images_placeholder, embeddings, phase_train_placeholder, embedding_size, model, class_names
+
+def classify(faces, batch_size, model, sess, images_placeholder, embeddings, phase_train_placeholder, embedding_size):
+    np.random.seed(seed=666)
+    nrof_faces = len(faces)
+    print('Calculating features for ', nrof_faces, ' faces')
+    nrof_batches_per_epoch = int(math.ceil(1.0 * nrof_faces / batch_size))
+    emb_array = np.zeros((nrof_faces, embedding_size))
+    for i in range(nrof_batches_per_epoch):
+        print ('calculate batch ', (i + 1), '/', nrof_batches_per_epoch)
+        start_index = i * batch_size
+        end_index = min((i + 1) * batch_size, nrof_faces)
+        faces_batch = faces[start_index:end_index]
+        feed_dict = {images_placeholder: faces_batch, phase_train_placeholder: False}
+        emb_array[start_index:end_index, :] = sess.run(embeddings, feed_dict=feed_dict)
+
+    predictions = model.predict_proba(emb_array)
+    best_class_indices = np.argmax(predictions, axis=1)
+    best_class_probabilities = predictions[np.arange(len(best_class_indices)), best_class_indices]
+
+    return best_class_indices, best_class_probabilities
+
 def parse_arguments(argv):
     parser = argparse.ArgumentParser()
     
