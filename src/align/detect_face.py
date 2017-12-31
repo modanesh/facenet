@@ -419,7 +419,6 @@ def detect_face(img, minsize, pnet, rnet, onet, threshold, factor):
 
 def bulk_detect_face(images, detection_window_size_ratio, pnet, rnet, onet, threshold, factor):
     # im: input image
-    # minsize: minimum of faces' size
     # pnet, rnet, onet: caffemodel
     # threshold: threshold=[th1 th2 th3], th1-3 are three steps's threshold [0-1]
 
