@@ -29,6 +29,9 @@ from __future__ import print_function
 import tensorflow as tf
 import numpy as np
 import argparse
+
+import time
+
 import facenet
 import os
 import sys
@@ -37,13 +40,11 @@ import pickle
 from sklearn.svm import SVC
 
 def main(args):
-  
     with tf.Graph().as_default():
       
         with tf.Session() as sess:
             
             np.random.seed(seed=args.seed)
-            
             if args.use_split_dataset:
                 dataset_tmp = facenet.get_dataset(args.data_dir)
                 train_set, test_set = split_dataset(dataset_tmp, args.min_nrof_images_per_class, args.nrof_train_images_per_class)
@@ -58,15 +59,19 @@ def main(args):
             for cls in dataset:
                 assert len(cls.image_paths)>0, 'There must be at least one image for each class in the dataset'
 
-                 
             paths, labels = facenet.get_image_paths_and_labels(dataset)
             
             print('Number of classes: %d' % len(dataset))
             print('Number of images: %d' % len(paths))
             
             # Load the model
+            start_time = time.time()
             print('Loading feature extraction model')
             facenet.load_model(args.model)
+            print(time.time() - start_time)
+
+            start_time = time.time()
+            print('Step 0')
             
             # Get input and output tensors
             images_placeholder = tf.get_default_graph().get_tensor_by_name("input:0")
@@ -92,14 +97,18 @@ def main(args):
             if (args.mode=='TRAIN'):
                 # Train classifier
                 print('Training classifier')
+                print('Step 1')
                 model = SVC(kernel='linear', probability=True)
                 model.fit(emb_array, labels)
 
                 # Create a list of class names
+                print('Step 2')
                 class_names = [ cls.name.replace('_', ' ') for cls in dataset]
 
                 # Saving classifier model
+                print('Step 3')
                 with open(classifier_filename_exp, 'wb') as outfile:
+                    print('Step 4')
                     pickle.dump((model, class_names), outfile)
                 print('Saved classifier model to file "%s"' % classifier_filename_exp)
 
@@ -120,7 +129,7 @@ def main(args):
 
                 accuracy = np.mean(np.equal(best_class_indices, labels))
                 print('Accuracy: %.3f' % accuracy)
-                
+    print(time.time() - start_time)
             
 def split_dataset(dataset, min_nrof_images_per_class, nrof_train_images_per_class):
     train_set = []
