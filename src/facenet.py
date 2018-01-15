@@ -257,12 +257,12 @@ def load_data(image_paths, do_random_crop, do_random_flip, image_size, do_prewhi
     images = np.zeros((nrof_samples, image_size, image_size, 3))
     for i in range(nrof_samples):
         img = misc.imread(image_paths[i])
-        # if img.ndim == 2:
-        #     img = to_rgb(img)
-        # if do_prewhiten:
-        #     img = prewhiten(img)
-        # img = crop(img, do_random_crop, image_size)
-        # img = flip(img, do_random_flip)
+        if img.ndim == 2:
+            img = to_rgb(img)
+        if do_prewhiten:
+            img = prewhiten(img)
+        img = crop(img, do_random_crop, image_size)
+        img = flip(img, do_random_flip)
         images[i,:,:,:] = img
     return images
 
@@ -442,11 +442,9 @@ def calculate_roc(thresholds, embeddings1, embeddings2, actual_issame, nrof_fold
     accuracy = np.zeros((nrof_folds))
     
     diff = np.subtract(embeddings1, embeddings2)
-    dist = np.sum(np.square(diff),1)
+    dist = np.sum(np.square(diff), 1)
     indices = np.arange(nrof_pairs)
-    
     for fold_idx, (train_set, test_set) in enumerate(k_fold.split(indices)):
-        
         # Find the best threshold for the fold
         acc_train = np.zeros((nrof_thresholds))
         for threshold_idx, threshold in enumerate(thresholds):
@@ -487,7 +485,7 @@ def calculate_val(thresholds, embeddings1, embeddings2, actual_issame, far_targe
     diff = np.subtract(embeddings1, embeddings2)
     dist = np.sum(np.square(diff),1)
     indices = np.arange(nrof_pairs)
-    
+
     for fold_idx, (train_set, test_set) in enumerate(k_fold.split(indices)):
       
         # Find the threshold that gives FAR = far_target
