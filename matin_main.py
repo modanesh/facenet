@@ -32,15 +32,15 @@ def main():
         image = cv2.imread("/Users/Mohamad/Sensifai/FaceNet/data/aligned_images/Unknown/" + file)
 
         # detect faces in given image and return bounding boxes
-        # boxes, faces = detect_faces_image(image, pnet_fun, rnet_fun, onet_fun)
-        detect_faces_image(image, pnet_fun, rnet_fun, onet_fun)
+        boxes, faces = detect_faces_image(image, pnet_fun, rnet_fun, onet_fun)
+
         # recognize faces in given image and return bounding boxes, recognized labels and recognition probabilities
-        # boxes, faces, labels, probs = recognize_faces_image(image, pnet_fun, rnet_fun, onet_fun, sess, images_ph, embs, phase_train_ph, emb_size, model, class_names)
+        boxes, faces, labels, probs = recognize_faces_image(image, pnet_fun, rnet_fun, onet_fun, sess, images_ph, embs, phase_train_ph, emb_size, model, class_names)
 
         # print results just for testing phase
-        # print('total of ' + str(len(boxes)) + ' faces detected and classified:')
-        # for label in labels:
-        #     print(label)
+        print('total of ' + str(len(boxes)) + ' faces detected and classified:')
+        for label in labels:
+            print(label)
 
 
 def detect_faces_image(image, pnet_fun, rnet_fun, onet_fun):
@@ -50,10 +50,10 @@ def detect_faces_image(image, pnet_fun, rnet_fun, onet_fun):
     print("_____________________")
     print(time.time() - start_time)
 
-    # for b in boxes:
-    #     x1, y1, x2, y2 = max(0, min(int(b[0]), image.shape[1])), max(0, min(int(b[1]), image.shape[0])), max(0, min(int(b[2]), image.shape[1])), max(0, min(int(b[3]), image.shape[0]))
-    #     faces.append(image[y1:y2, x1:x2, :])
-    # return boxes, faces
+    for b in boxes:
+        x1, y1, x2, y2 = max(0, min(int(b[0]), image.shape[1])), max(0, min(int(b[1]), image.shape[0])), max(0, min(int(b[2]), image.shape[1])), max(0, min(int(b[3]), image.shape[0]))
+        faces.append(image[y1:y2, x1:x2, :])
+    return boxes, faces
 
 
 def recognize_faces_image(image, pnet_fun, rnet_fun, onet_fun, sess, images_ph, embs, phase_train_ph, emb_size, model, class_names):
