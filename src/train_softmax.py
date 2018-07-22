@@ -99,7 +99,7 @@ def main(args):
                              shuffle=True, seed=None, capacity=32)
         
         index_dequeue_op = index_queue.dequeue_many(args.batch_size*args.epoch_size, 'index_dequeue')
-        
+
         learning_rate_placeholder = tf.placeholder(tf.float32, name='learning_rate')
 
         batch_size_placeholder = tf.placeholder(tf.int32, name='batch_size')
@@ -156,8 +156,8 @@ def main(args):
         prelogits, _ = network.inference(image_batch, args.keep_probability, 
             phase_train=phase_train_placeholder, bottleneck_layer_size=args.embedding_size, 
             weight_decay=args.weight_decay)
-        logits = slim.fully_connected(prelogits, len(train_set), activation_fn=None, 
-                weights_initializer=tf.truncated_normal_initializer(stddev=0.1), 
+        logits = slim.fully_connected(prelogits, len(train_set), activation_fn=None,
+                weights_initializer=tf.truncated_normal_initializer(stddev=0.1),
                 weights_regularizer=slim.l2_regularizer(args.weight_decay),
                 scope='Logits', reuse=False)
 
@@ -187,7 +187,14 @@ def main(args):
             learning_rate, args.moving_average_decay, tf.global_variables(), args.log_histograms)
         
         # Create a saver
-        saver = tf.train.Saver(tf.trainable_variables(), max_to_keep=3)
+        if args.pretrain_mode == "full_network":
+            saver = tf.train.Saver(tf.trainable_variables(), max_to_keep=3)
+        elif args.pretrain_mode == "exclude_last_layer":
+            all_vars = tf.trainable_variables()
+            var_to_restore = [v for v in all_vars if not v.name.startswith('Logits')]
+            saver = tf.train.Saver(var_to_restore)
+
+
 
         # Build the summary operation based on the TF collection of Summaries.
         summary_op = tf.summary.merge_all()
@@ -205,7 +212,9 @@ def main(args):
 
             if pretrained_model:
                 print('Restoring pretrained model: %s' % pretrained_model)
-                saver.restore(sess, pretrained_model)
+                print('Model directory: %s' % pretrained_model)
+                meta_file, ckpt_file = facenet.get_model_filenames(pretrained_model)
+                saver.restore(sess, os.path.join(pretrained_model, ckpt_file))
 
             # Training and validation loop
             print('Running training')
@@ -427,7 +436,9 @@ def parse_arguments(argv):
         help='Keep only the percentile images closed to its class center', default=100.0)
     parser.add_argument('--filter_min_nrof_images_per_class', type=int,
         help='Keep only the classes with this number of examples or more', default=0)
- 
+    parser.add_argument('--pretrain_mode', type=str, choices=['full_network', 'exclude_last_layer'],
+                        default='full_network', help='Training the full network or excluding the last layer.')
+
     # Parameters for validation on LFW
     parser.add_argument('--lfw_pairs', type=str,
         help='The file containing the pairs to use for validation.', default='data/pairs.txt')
@@ -439,6 +450,7 @@ def parse_arguments(argv):
         help='Number of images to process in a batch in the LFW test set.', default=100)
     parser.add_argument('--lfw_nrof_folds', type=int,
         help='Number of folds to use for cross validation. Mainly used for testing.', default=10)
+
     return parser.parse_args(argv)
   
 

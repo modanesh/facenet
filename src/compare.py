@@ -34,6 +34,8 @@ import os
 import argparse
 import facenet
 import align.detect_face
+from sklearn.metrics.pairwise import cosine_similarity
+
 
 def main(args):
 
@@ -70,8 +72,18 @@ def main(args):
             for i in range(nrof_images):
                 print('%1d  ' % i, end='')
                 for j in range(nrof_images):
-                    dist = np.sqrt(np.sum(np.square(np.subtract(emb[i,:], emb[j,:]))))
-                    print('  %1.4f  ' % dist, end='')
+
+                    if args.distance_measure == "L2":
+                        # Map 0.0 to 2.0 distance into 0 to 100, where 0 means "the same" and 100 means "complete opposite"
+                        # According to the FaceNet paper, the L2 distance of 1.1, which maps to 45, is a preferred threshold.
+
+                        l2_dist = np.sqrt(np.sum(np.square(np.subtract(emb[i, :], emb[j, :]))))
+                        confidence = (2 - l2_dist) * 50
+                        print('  %1.4f  ' % confidence, end='')
+                    elif args.distance_measure == "cosine":
+                        cosine_dist = cosine_similarity(emb[i, :], emb[j, :])
+                        print('  %1.4f  ' % cosine_dist, end='')
+
                 print('')
             
             
@@ -116,9 +128,11 @@ def parse_arguments(argv):
     parser.add_argument('--image_size', type=int,
         help='Image size (height, width) in pixels.', default=160)
     parser.add_argument('--margin', type=int,
-        help='Margin for the crop around the bounding box (height, width) in pixels.', default=44)
+        help='Margin for the crop around the bounding box (height, width) in pixels.', default=0)
     parser.add_argument('--gpu_memory_fraction', type=float,
         help='Upper bound on the amount of GPU memory that will be used by the process.', default=1.0)
+    parser.add_argument('--distance_measure', type=str, choices=['L2', 'cosine'],
+                        help='Use either L2 or Cosine to measure the distance between embeddings.', default="L2")
     return parser.parse_args(argv)
 
 if __name__ == '__main__':

@@ -38,6 +38,7 @@ import sys
 import math
 import pickle
 from sklearn.svm import SVC
+from sklearn.svm import LinearSVC
 
 def main(args):
     with tf.Graph().as_default():
@@ -65,14 +66,9 @@ def main(args):
             print('Number of images: %d' % len(paths))
             
             # Load the model
-            start_time = time.time()
             print('Loading feature extraction model')
-            facenet.load_model(args.model)
-            print(time.time() - start_time)
+            facenet.load_model(args.model, sess)
 
-            start_time = time.time()
-            print('Step 0')
-            
             # Get input and output tensors
             images_placeholder = tf.get_default_graph().get_tensor_by_name("input:0")
             embeddings = tf.get_default_graph().get_tensor_by_name("embeddings:0")
@@ -97,19 +93,16 @@ def main(args):
             if (args.mode=='TRAIN'):
                 # Train classifier
                 print('Training classifier')
-                print('Step 1')
-                model = SVC(kernel='linear', probability=True)
+                # model = SVC(kernel='rbf', probability=True, decision_function_shape='ovr')
+                model = LinearSVC(dual=False, multi_class="ovr")
                 model.fit(emb_array, labels)
 
                 # Create a list of class names
-                print('Step 2')
                 class_names = [ cls.name.replace('_', ' ') for cls in dataset]
 
                 # Saving classifier model
-                print('Step 3')
                 with open(classifier_filename_exp, 'wb') as outfile:
-                    print('Step 4')
-                    pickle.dump((model, class_names), outfile)
+                    pickle.dump((model, class_names), outfile, protocol=4)
                 print('Saved classifier model to file "%s"' % classifier_filename_exp)
 
             elif (args.mode=='CLASSIFY'):
@@ -120,17 +113,30 @@ def main(args):
 
                 print('Loaded classifier model from file "%s"' % classifier_filename_exp)
 
-                predictions = model.predict_proba(emb_array)
-                best_class_indices = np.argmax(predictions, axis=1)
-                best_class_probabilities = predictions[np.arange(len(best_class_indices)), best_class_indices]
-
-                for i in range(len(best_class_indices)):
-                    print('%4d  %s: %.3f' % (i, class_names[best_class_indices[i]], best_class_probabilities[i]))
-
-                accuracy = np.mean(np.equal(best_class_indices, labels))
+                selected_paths = []
+                # Used for LinearSVC models
+                predictions = model.predict(emb_array)
+                probabilities = model.decision_function(emb_array)
+                for i in range(len(predictions)):
+                    print('class: %4d, predicted_label: %4d, probability: %.3f' % (labels[i], predictions[i], probabilities[i]))
+                    # Wrongly classified images
+                    if labels[i] != predictions[i]:
+                        selected_paths.append(paths[i])
+                accuracy = np.mean(np.equal(predictions, labels))
                 print('Accuracy: %.3f' % accuracy)
-    print(time.time() - start_time)
-            
+
+                # # Used for SVC models
+                # predictions = model.predict_proba(emb_array)
+                # best_class_indices = np.argmax(predictions, axis=1)
+                # best_class_probabilities = predictions[np.arange(len(best_class_indices)), best_class_indices]
+                #
+                # for i in range(len(best_class_indices)):
+                #     print('%4d  %s: %.3f' % (i, class_names[best_class_indices[i]], best_class_probabilities[i]))
+                #
+                # accuracy = np.mean(np.equal(best_class_indices, labels))
+                # print('Accuracy: %.3f' % accuracy)
+
+
 def split_dataset(dataset, min_nrof_images_per_class, nrof_train_images_per_class):
     train_set = []
     test_set = []
@@ -192,9 +198,9 @@ def parse_arguments(argv):
         'model should be used for classification', default='CLASSIFY')
     parser.add_argument('data_dir', type=str,
         help='Path to the data directory containing aligned LFW face patches.')
-    parser.add_argument('model', type=str, 
+    parser.add_argument('model', type=str,
         help='Could be either a directory containing the meta_file and ckpt_file or a model protobuf (.pb) file')
-    parser.add_argument('classifier_filename', 
+    parser.add_argument('classifier_filename',
         help='Classifier model file name as a pickle (.pkl) file. ' + 
         'For training this is the output and for classification this is an input.')
     parser.add_argument('--use_split_dataset', 
@@ -212,7 +218,7 @@ def parse_arguments(argv):
         help='Only include classes with at least this number of images in the dataset', default=20)
     parser.add_argument('--nrof_train_images_per_class', type=int,
         help='Use this number of images from each class for training and the rest for testing', default=10)
-    
+
     return parser.parse_args(argv)
 
 if __name__ == '__main__':
