@@ -43,7 +43,7 @@ def main(args):
         os.makedirs(output_dir)
     # Store some git revision info in a text file in the log directory
     src_path,_ = os.path.split(os.path.realpath(__file__))
-    facenet.store_revision_info(src_path, output_dir, ' '.join(sys.argv))
+    # facenet.store_revision_info(src_path, output_dir, ' '.join(sys.argv))
     dataset = facenet.get_dataset(args.input_dir)
     
     print('Creating networks and loading parameters')
@@ -60,7 +60,7 @@ def main(args):
 
     # Add a random key to the filename to allow alignment using multiple processes
     random_key = np.random.randint(0, high=99999)
-    bounding_boxes_filename = os.path.join(output_dir, 'bounding_boxes_%05d.txt' % random_key)
+    bounding_boxes_filename = os.path.join(output_dir, '../alignment_info_bounding_boxes_%05d.txt' % random_key)
     
     with open(bounding_boxes_filename, "w") as text_file:
         nrof_images_total = 0
@@ -93,23 +93,24 @@ def main(args):
                             img = facenet.to_rgb(img)
                         img = img[:,:,0:3]
     
-                        bounding_boxes, _ = align.detect_face.detect_face(img, minsize, pnet, rnet, onet, threshold, factor)
+                        bounding_boxes, points = align.detect_face.detect_face(img, minsize, pnet, rnet, onet, threshold, factor)
                         nrof_faces = bounding_boxes.shape[0]
                         if nrof_faces>0:
                             det = bounding_boxes[:,0:4]
                             det_arr = []
                             img_size = np.asarray(img.shape)[0:2]
                             if nrof_faces>1:
-                                if args.detect_multiple_faces:
-                                    for i in range(nrof_faces):
-                                        det_arr.append(np.squeeze(det[i]))
-                                else:
-                                    bounding_box_size = (det[:,2]-det[:,0])*(det[:,3]-det[:,1])
-                                    img_center = img_size / 2
-                                    offsets = np.vstack([ (det[:,0]+det[:,2])/2-img_center[1], (det[:,1]+det[:,3])/2-img_center[0] ])
-                                    offset_dist_squared = np.sum(np.power(offsets,2.0),0)
-                                    index = np.argmax(bounding_box_size-offset_dist_squared*2.0) # some extra weight on the centering
-                                    det_arr.append(det[index,:])
+                                if args.want_multiple_face:
+                                    if args.detect_multiple_faces:
+                                        for i in range(nrof_faces):
+                                            det_arr.append(np.squeeze(det[i]))
+                                    else:
+                                        bounding_box_size = (det[:,2]-det[:,0])*(det[:,3]-det[:,1])
+                                        img_center = img_size / 2
+                                        offsets = np.vstack([ (det[:,0]+det[:,2])/2-img_center[1], (det[:,1]+det[:,3])/2-img_center[0] ])
+                                        offset_dist_squared = np.sum(np.power(offsets,2.0),0)
+                                        index = np.argmax(bounding_box_size-offset_dist_squared*2.0) # some extra weight on the centering
+                                        det_arr.append(det[index,:])
                             else:
                                 det_arr.append(np.squeeze(det))
 
@@ -136,7 +137,7 @@ def main(args):
                             
     print('Total number of images: %d' % nrof_images_total)
     print('Number of successfully aligned images: %d' % nrof_successfully_aligned)
-            
+
 
 def parse_arguments(argv):
     parser = argparse.ArgumentParser()
@@ -144,15 +145,17 @@ def parse_arguments(argv):
     parser.add_argument('input_dir', type=str, help='Directory with unaligned images.')
     parser.add_argument('output_dir', type=str, help='Directory with aligned face thumbnails.')
     parser.add_argument('--image_size', type=int,
-        help='Image size (height, width) in pixels.', default=182)
+        help='Image size (height, width) in pixels.', default=160)
     parser.add_argument('--margin', type=int,
-        help='Margin for the crop around the bounding box (height, width) in pixels.', default=44)
+        help='Margin for the crop around the bounding box (height, width) in pixels.', default=0)
     parser.add_argument('--random_order', 
         help='Shuffles the order of images to enable alignment using multiple processes.', action='store_true')
     parser.add_argument('--gpu_memory_fraction', type=float,
         help='Upper bound on the amount of GPU memory that will be used by the process.', default=1.0)
     parser.add_argument('--detect_multiple_faces', type=bool,
                         help='Detect and align multiple faces per image.', default=False)
+    parser.add_argument('--want_multiple_face', type=bool,
+                        help='Work on images that have multiple faces in them.', default=False)
     return parser.parse_args(argv)
 
 if __name__ == '__main__':
